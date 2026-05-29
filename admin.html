@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限控制</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",sans-serif}
+        body{background:#f9fafb;color:#333;line-height:1.8;padding-bottom:80px;}
+        .container{max-width:1200px;margin:0 auto;padding:0 1rem}
+        a{text-decoration:none;color:inherit}
+        ul{list-style:none}
+        header{background:#ffffff;position:sticky;top:0;z-index:99;padding:20px 1rem}
+        .header-top{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+        .logo{font-size:20px;font-weight:600;color:#2563eb}
+        .nav-list{display:flex;gap:2.5rem}
+        .nav-list a{font-size:15px;color:#333}
+        .main{max-width:1140px;margin:40px auto 0;padding:0 1rem}
+        .card{background:#ffffff;border-radius:8px;padding:30px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:20px}
+        .card h4{font-size:16px;margin-bottom:20px;color:#222}
+        input,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px}
+        .btn{padding:10px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-right:10px}
+        .btn:disabled{background:#999}
+        .tip{color:#64748b;font-size:14px}
+        .auth-item{border:1px solid #eee;padding:15px;border-radius:6px;margin-bottom:15px;line-height:1.8}
+        footer{background:#1a2436;color:#cbd5e1;text-align:center;padding:1.5rem 1rem;position:fixed;bottom:0;left:0;width:100%;}
+        footer p{font-size:14px}
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-top">
+        <div class="logo">视频共享平台</div>
+        <ul class="nav-list">
+            <li><a href="index.html">首页</a></li>
+            <li><a href="user.html">用户中心</a></li>
+            <li><a href="video.html">视频管理</a></li>
+            <li><a href="admin.html">权限控制</a></li>
+        </ul>
+    </div>
+</header>
+<div class="container main">
+    <div class="card">
+        <h4>管理员登录</h4>
+        <input id="adminPwd" type="password" placeholder="输入管理员密码">
+        <button class="btn" onclick="adminLogin()">登录</button>
+        <div class="tip">请输入管理员密码</div>
+    </div>
+    <div class="card">
+        <h4>权限设置</h4>
+        <input id="maxNum" type="number" min="1" value="1" placeholder="最大选择/下载数量">
+        <button class="btn" id="saveBtn" disabled onclick="saveSetting()">保存设置</button>
+    </div>
+    <div class="card">
+        <h4>用户认证审核</h4>
+        <div id="authListBox"></div>
+        <div class="tip" id="noDataTip">暂无认证申请</div>
+    </div>
+    <div class="card">
+        <h4>视频上传管理</h4>
+        <select id="uploadType">
+            <option value="below1w">1万粉以下</option>
+            <option value="above1w">1万粉以上</option>
+            <option value="all">全部（不区分粉丝量）</option>
+        </select>
+        <div style="margin-top:10px;display:flex;gap:10px">
+            <button class="btn" id="uploadBtn" disabled>上传视频</button>
+            <button class="btn" id="clearBtn" disabled>清空全部视频</button>
+        </div>
+        <input type="file" id="videoFile" accept="video/*" multiple style="display:none;">
+        <div class="tip">先选择分类再上传</div>
+    </div>
+</div>
+<footer>
+    <p>© 2026 视频共享平台 版权所有</p>
+</footer>
+
+<script>
+const UPYUN_BUCKET = "my-video-site1911";
+const UPYUN_OPERATOR = "chenchaojie";
+const UPYUN_PWD = "a7UDc4MAbyf12kPEaeebaJISakjkSxtd";
+const UPYUN_DIR = "/videos/1911";
+
+const ADMIN_PWD = "123456";
+let isAdmin = false;
+
+function getAuth(){ return btoa(UPYUN_OPERATOR + ":" + UPYUN_PWD); }
+function adminLogin(){
+    if(adminPwd.value === ADMIN_PWD){
+        isAdmin = true; uploadBtn.disabled = false; clearBtn.disabled = false; saveBtn.disabled = false;
+        refreshAuthUI(); alert("登录成功");
+    }else{ alert("密码错误"); }
+}
+function saveSetting(){
+    if(!isAdmin) return; localStorage.setItem("maxSelect", maxNum.value);
+    alert("保存成功：最大下载数 = "+maxNum.value);
+}
+function refreshAuthUI(){
+    const authList = JSON.parse(localStorage.getItem("authList") || "[]");
+    const waitList = authList.filter(item => item.authStatus === "待审核");
+    const box = document.getElementById("authListBox"); box.innerHTML = "";
+    if(waitList.length === 0){ noDataTip.style.display = "block"; return; }
+    noDataTip.style.display = "none";
+    waitList.forEach(item => {
+        const fanText = item.fanLevel === "above1w" ? "1万粉以上" : "1万粉以下";
+        const div = document.createElement("div"); div.className = "auth-item";
+        div.innerHTML = `抖音链接：${item.dyLink || "-"}<br>抖音名称：${item.dyName || "-"}<br>抖音ID：${item.dyId || "-"}<br>粉丝数量：${item.fanCount || 0}<br>粉丝分类：${fanText}<br>状态：待审核<br>
+            <div style="margin-top:10px;display:flex;gap:10px">
+                <button class="btn" onclick="passAuth('${item.userId}')">同意认证</button>
+                <button class="btn" onclick="rejectAuth('${item.userId}')">拒绝认证</button>
+            </div>`;
+        box.appendChild(div);
+    });
+}
+function passAuth(uid){
+    if(!isAdmin) return;
+    let authList = JSON.parse(localStorage.getItem("authList") || "[]");
+    const idx = authList.findIndex(item => item.userId === uid);
+    if(idx > -1){ authList[idx].authStatus = "已认证"; authList[idx].authTime = new Date().toLocaleString(); }
+    localStorage.setItem("authList", JSON.stringify(authList)); refreshAuthUI(); alert("已同意");
+}
+function rejectAuth(uid){
+    if(!isAdmin) return;
+    let authList = JSON.parse(localStorage.getItem("authList") || "[]");
+    const idx = authList.findIndex(item => item.userId === uid);
+    if(idx > -1) authList[idx].authStatus = "未认证";
+    localStorage.setItem("authList", JSON.stringify(authList)); refreshAuthUI(); alert("已拒绝");
+}
+
+uploadBtn.onclick = () => videoFile.click();
+videoFile.onchange = async (e) => {
+    if(!isAdmin) return;
+    const files = e.target.files; const type = uploadType.value;
+    for(let file of files){
+        const fileName = "admin_" + Date.now() + "_" + file.name;
+        const key = UPYUN_DIR + "/" + fileName;
+        await fetch(`https://v0.api.upyun.com/${UPYUN_BUCKET}${key}`, {
+            method: "PUT", headers: { Authorization: "Basic " + getAuth() }, body: file
+        });
+        let list = JSON.parse(localStorage.getItem("videoList") || "[]");
+        list.push({ name: file.name, key: key, type: type, uploader: "admin" });
+        localStorage.setItem("videoList", JSON.stringify(list));
+    }
+    alert("管理员上传成功"); videoFile.value = "";
+};
+
+clearBtn.onclick = () => {
+    if(!isAdmin) return; if(!confirm("确定清空所有视频？")) return;
+    localStorage.removeItem("videoList"); alert("已清空所有视频");
+};
+
+window.onload = () => {
+    let val = localStorage.getItem("maxSelect"); if(val) maxNum.value = val; refreshAuthUI();
+};
+</script>
+</body>
+</html>

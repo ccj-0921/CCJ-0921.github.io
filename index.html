@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频共享平台</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",sans-serif}
+        body{background:#f9fafb;color:#333;line-height:1.8;padding-bottom:60px;min-height:100vh;box-sizing:border-box;}
+        .container{max-width:1200px;margin:0 auto;padding:0 1rem}
+        a{text-decoration:none;color:inherit}
+        ul{list-style:none}
+        header{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.05);position:sticky;top:0;z-index:99}
+        .nav{display:flex;justify-content:space-between;align-items:center;height:70px}
+        .logo{font-size:22px;font-weight:600;color:#2563eb}
+        .nav-list{display:flex;gap:2rem}
+        .nav-list a{font-size:15px}
+        .nav-list a:hover{color:#2563eb}
+        .banner{height:420px;background:#eef4ff;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:4rem}
+        .banner-text h1{font-size:36px;margin-bottom:1rem;color:#1e293b}
+        .banner-text p{font-size:16px;color:#64748b;max-width:600px}
+        .section-title{text-align:center;margin-bottom:3rem}
+        .section-title h2{font-size:28px;color:#1e293b}
+        .section-title p{color:#64748b;font-size:15px}
+        .card-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;padding-bottom:60px}
+        .card{background:#fff;padding:2rem;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);cursor:pointer;transition:.2s}
+        .card:hover{transform:translateY(-4px)}
+        .card h3{margin-bottom:1rem;color:#1e293b}
+        .card p{color:#555;font-size:14px}
+        footer{background:#1e293b;color:#cbd5e1;text-align:center;padding:1rem 1rem;position:fixed;left:0;bottom:0;width:100%;z-index:98;}
+        footer p{font-size:14px}
+    </style>
+</head>
+<body>
+<header>
+    <div class="container nav">
+        <div class="logo">视频共享平台</div>
+        <ul class="nav-list">
+            <li><a href="index.html">首页</a></li>
+            <li><a href="user.html">用户中心</a></li>
+            <li><a href="video.html">视频管理</a></li>
+            <li><a href="admin.html">权限控制</a></li>
+            <li><a href="javascript:signUp()">报名</a></li>
+        </ul>
+    </div>
+</header>
+<section class="banner">
+    <div class="banner-text">
+        <h1>视频共享管理平台</h1>
+        <p>安全、高效、简洁的视频上传、管理、分享系统</p>
+    </div>
+</section>
+<div class="container">
+    <div class="section-title">
+        <h2>平台功能</h2>
+        <p>简洁模块化设计，层次清晰</p>
+    </div>
+    <div class="card-wrap">
+        <div class="card" onclick="goVideo()">
+            <h3>视频管理</h3>
+            <p>支持多视频上传、批量选择、批量下载。</p>
+        </div>
+        <div class="card" onclick="location.href='user.html'">
+            <h3>用户认证</h3>
+            <p>抖音粉丝认证，自动分级，本地数据持久化存储。</p>
+        </div>
+        <div class="card" onclick="location.href='admin.html'">
+            <h3>权限控制</h3>
+            <p>管理员密码登录，可设置最大选择与下载数量，安全可靠。</p>
+        </div>
+    </div>
+</div>
+<footer>
+    <p>© 2026 视频共享平台 版权所有。</p>
+</footer>
+
+<script>
+function signUp(){
+    localStorage.setItem("hasSigned","true");
+    alert("报名成功！现在可以下载视频了！");
+}
+function goVideo(){
+    var hasSigned = localStorage.getItem("hasSigned");
+    if(hasSigned == "true"){
+        location.href = "video.html";
+    }else{
+        alert("请先点击顶部【报名】，报名成功后才能进入视频管理！");
+    }
+}
+const visitorId = localStorage.getItem('visitorId') || Date.now().toString();
+localStorage.setItem('visitorId', visitorId);
+</script>
+</body>
+</html>

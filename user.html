@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户中心</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",sans-serif}
+        body{background:#f9fafb;color:#333;line-height:1.8;padding-bottom:80px;}
+        .container{max-width:1200px;margin:0 auto;padding:0 1rem}
+        a{text-decoration:none;color:inherit}
+        ul{list-style:none}
+        header{background:#ffffff;position:sticky;top:0;z-index:99;padding:20px 1rem}
+        .header-top{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+        .logo{font-size:20px;font-weight:600;color:#2563eb}
+        .nav-list{display:flex;gap:2.5rem}
+        .nav-list a{font-size:15px;color:#333}
+        .main{max-width:1140px;margin:40px auto 0;padding:0 1rem}
+        .card{background:#ffffff;border-radius:8px;padding:30px;box-shadow:0 1px 3px rgba(0,0,0,0.05);margin-bottom:20px}
+        .card h4{font-size:16px;margin-bottom:20px;color:#222}
+        .input-line{margin-bottom:12px}
+        .input-line input{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-top:4px}
+        .btn{padding:10px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer}
+        .tip{color:#64748b;font-size:14px;margin-top:4px}
+        .info-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+        .info-item:last-child{border-bottom:none}
+        footer{background:#1a2436;color:#cbd5e1;text-align:center;padding:1.5rem 1rem;position:fixed;bottom:0;left:0;width:100%;}
+        footer p{font-size:14px}
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-top">
+        <div class="logo">视频共享平台</div>
+        <ul class="nav-list">
+            <li><a href="index.html">首页</a></li>
+            <li><a href="user.html">用户中心</a></li>
+            <li><a href="video.html">视频管理</a></li>
+            <li><a href="admin.html">权限控制</a></li>
+        </ul>
+    </div>
+</header>
+<div class="container main">
+    <div class="card">
+        <h4>个人认证（抖音 · 需管理员同意）</h4>
+        <div class="input-line"><input id="dyLink" placeholder="粘贴抖音视频链接（必填）"></div>
+        <div class="input-line"><input id="dyName" placeholder="输入抖音名字（必填）"></div>
+        <div class="input-line"><input id="dyId" placeholder="输入抖音账号ID（必填）"></div>
+        <div class="input-line"><input id="fanInput" placeholder="输入真实粉丝数（必填）" type="number"></div>
+        <div style="margin-top:10px"><button class="btn" onclick="authFan()">提交认证</button></div>
+        <div class="tip" id="fanTip">未认证</div>
+    </div>
+    <div class="card">
+        <h4>账号信息</h4>
+        <div class="info-item"><span>账号：</span><span id="showUser">-</span></div>
+        <div class="info-item"><span>密码：</span><span id="showPwd">-</span></div>
+        <div class="info-item"><span>抖音名字：</span><span id="showDyName">-</span></div>
+        <div class="info-item"><span>抖音ID：</span><span id="showDyId">-</span></div>
+        <div class="info-item"><span>认证状态：</span><span id="showAuth">-</span></div>
+        <div class="info-item"><span>粉丝数：</span><span id="showFans">-</span></div>
+        <div class="info-item"><span>粉丝分类：</span><span id="showLevel">-</span></div>
+        <div class="info-item"><span>认证时间：</span><span id="showTime">-</span></div>
+    </div>
+</div>
+<footer>
+    <p>© 2026 视频共享平台 版权所有</p>
+</footer>
+<script>
+const userId = localStorage.getItem('currentUserId') || 'user_' + Date.now();
+localStorage.setItem('currentUserId', userId);
+let authList = JSON.parse(localStorage.getItem("authList")) || [];
+let userInfo = authList.find(item => item.userId === userId) || {
+    userId: userId, dyLink: "", dyName: "", dyId: "", fanCount: 0, fanLevel: "", authStatus: "未认证", authTime: ""
+};
+function updateUI(){
+    showUser.innerText = "访客账号"; showPwd.innerText = "匿名访问";
+    showDyName.innerText = userInfo.dyName || "-"; showDyId.innerText = userInfo.dyId || "-";
+    showAuth.innerText = userInfo.authStatus; showFans.innerText = userInfo.fanCount;
+    showLevel.innerText = userInfo.fanLevel === "above1w" ? "1万粉以上" : userInfo.fanLevel === "below1w" ? "1万粉以下" : "-";
+    showTime.innerText = userInfo.authTime || "-"; fanTip.innerText = userInfo.authStatus;
+}
+function authFan(){
+    let link = dyLink.value.trim();
+    let dyName = document.getElementById("dyName").value.trim();
+    let dyId = document.getElementById("dyId").value.trim();
+    let fan = parseInt(fanInput.value);
+    if(!link.includes("douyin")){alert("请输入有效的抖音链接");return;}
+    if(!dyName){alert("请输入抖音名字");return;}
+    if(!dyId){alert("请输入抖音账号ID");return;}
+    if(isNaN(fan)||fan<=0){alert("请输入正确的粉丝数量");return;}
+    userInfo.authStatus = "待审核"; userInfo.dyLink = link; userInfo.dyName = dyName;
+    userInfo.dyId = dyId; userInfo.fanCount = fan; userInfo.fanLevel = fan >= 10000 ? "above1w" : "below1w";
+    const index = authList.findIndex(item => item.userId === userId);
+    if(index > -1) authList[index] = userInfo; else authList.push(userInfo);
+    localStorage.setItem("authList", JSON.stringify(authList)); updateUI();
+    alert("提交成功，请等待管理员审核");
+}
+window.onload = updateUI;
+</script>
+</body>
+</html>
