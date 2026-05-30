@@ -81,33 +81,57 @@ if(!localStorage.getItem("hasSigned")){
     location.href = "index.html";
 }
 
-const UPYUN_BUCKET = "my-video-site1911";
-const UPYUN_OPERATOR = "chenchaojie";
-const UPYUN_PWD = "a7UDc4MAbyf12kPEaeebaJISakjkSxtd";
-const UPYUN_DOMAIN = "https://video.1911.click";
-const UPYUN_DIR = "/videos/1911";
+// ====================== 已填好你的 R2 信息 ======================
+const R2_ACCOUNT_ID = "4a7bbb1debc1e382f5969f9e2e6d7f6e";
+const R2_BUCKET_NAME = "wozhlpaln";
+const R2_ACCESS_KEY = "e606448410212133b6aff0abd28fed0b";
+const R2_SECRET_KEY = "d91570436d45e87f91891a2e9173c2969b09a6c120875d6375d583a102a2d265";
+const R2_DOMAIN ="https://video.1911.click";
+const R2_DIR = "/videos";
+// ===============================================================
 
 const visitorId = localStorage.getItem('visitorId') || Date.now().toString();
 localStorage.setItem('visitorId', visitorId);
 let currentFilter = "below1w";
 
-function getAuth(){
-    return btoa(UPYUN_OPERATOR + ":" + UPYUN_PWD);
+async function getR2AuthHeaders(fileName, fileSize) {
+    const date = new Date().toUTCString();
+    const key = `${R2_DIR}/${fileName}`;
+    const stringToSign = `PUT\n\n${fileSize}\n${date}\n/${R2_BUCKET_NAME}${key}`;
+    const signature = btoa(
+        await crypto.subtle.sign(
+            { name: "HMAC", hash: "SHA-1" },
+            await crypto.subtle.importKey(
+                "raw",
+                new TextEncoder().encode(R2_SECRET_KEY),
+                { name: "HMAC", hash: "SHA-1" },
+                false,
+                ["sign"]
+            ),
+            new TextEncoder().encode(stringToSign)
+        )
+    );
+    
+    return {
+        "Date": date,
+        "Authorization": `AWS ${R2_ACCESS_KEY}:${signature}`,
+        "Content-Length": fileSize
+    };
 }
 
-uploadBtn.onclick = () => videoFile.click();
-videoFile.onchange = async (e) => {
+document.getElementById('uploadBtn').onclick = () => document.getElementById('videoFile').click();
+document.getElementById('videoFile').onchange = async (e) => {
     const files = e.target.files;
     if(!files.length) return;
     for(let file of files){
         const fileName = Date.now() + "_" + file.name;
-        const key = UPYUN_DIR + "/" + fileName;
-        const formData = new FormData();
-        formData.append("file", file);
+        const key = R2_DIR + "/" + fileName;
+        const headers = await getR2AuthHeaders(fileName, file.size);
+        
         try{
-            await fetch(`https://v0.api.upyun.com/${UPYUN_BUCKET}${key}`, {
+            await fetch(`${R2_DOMAIN}${key}`, {
                 method: "PUT",
-                headers: { Authorization: "Basic " + getAuth() },
+                headers: headers,
                 body: file
             });
             let list = JSON.parse(localStorage.getItem("videoList") || "[]");
@@ -118,14 +142,16 @@ videoFile.onchange = async (e) => {
                 uploader: visitorId
             });
             localStorage.setItem("videoList", JSON.stringify(list));
-        }catch(e){}
+        }catch(e){
+            console.error("上传失败:", e);
+        }
     }
     alert("上传成功！");
-    videoFile.value = "";
+    document.getElementById('videoFile').value = "";
     renderList();
 };
 
-clearBtn.onclick = () => {
+document.getElementById('clearBtn').onclick = () => {
     if(!confirm("确定清空你自己上传的所有视频？")) return;
     let list = JSON.parse(localStorage.getItem("videoList") || "[]");
     list = list.filter(item => item.uploader !== visitorId);
@@ -136,31 +162,47 @@ clearBtn.onclick = () => {
 
 function renderList(){
     const all = JSON.parse(localStorage.getItem("videoList") || "[]");
+    const fileList = document.getElementById('fileList');
     fileList.innerHTML = "";
     const list = currentFilter === "all" ? all : all.filter(v => v.type === currentFilter);
-    if(!list.length){ fileList.innerHTML = "<div class='tip-text'>暂无视频</div>"; return; }
+    if(!list.length){ 
+        fileList.innerHTML = "<div class='tip-text'>暂无视频</div>"; 
+        return; 
+    }
     list.forEach(item => {
         const div = document.createElement("div");
         div.className = "file-item";
         div.innerHTML = `<input type="checkbox" class="check-box"><span>${item.name}</span>`;
         div.querySelector("span").onclick = () => {
-            player.src = UPYUN_DOMAIN + item.key;
-            videoModal.style.display = "flex";
+            document.getElementById('player').src = `${R2_DOMAIN}${item.key}`;
+            document.getElementById('videoModal').style.display = "flex";
         };
         fileList.appendChild(div);
     });
 }
 
-filter.onchange = () => { currentFilter = filter.value; renderList(); };
+document.getElementById('filter').onchange = () => { 
+    currentFilter = document.getElementById('filter').value; 
+    renderList(); 
+};
 
 async function doDownload(){
     const maxAllow = parseInt(localStorage.getItem("maxSelect")) || 1;
     const downloadCountKey = "downloadCount_" + visitorId;
     let already = parseInt(localStorage.getItem(downloadCountKey)) || 0;
-    if(already >= maxAllow){ alert(`最多下载 ${maxAllow} 个`); return; }
+    if(already >= maxAllow){ 
+        alert(`最多下载 ${maxAllow} 个`); 
+        return; 
+    }
     const selected = document.querySelectorAll(".check-box:checked");
-    if(!selected.length){ alert("请选择视频"); return; }
-    if(selected.length > maxAllow - already){ alert(`最多还能下载 ${maxAllow - already} 个`); return; }
+    if(!selected.length){ 
+        alert("请选择视频"); 
+        return; 
+    }
+    if(selected.length > maxAllow - already){ 
+        alert(`最多还能下载 ${maxAllow - already} 个`); 
+        return; 
+    }
     
     const list = JSON.parse(localStorage.getItem("videoList") || "[]");
     selected.forEach(cb => {
@@ -168,7 +210,7 @@ async function doDownload(){
         const item = list.find(v => v.name === name);
         if(item){
             const a = document.createElement("a");
-            a.href = UPYUN_DOMAIN + item.key;
+            a.href = `${R2_DOMAIN}${item.key}`;
             a.download = item.name;
             a.click();
         }
@@ -177,7 +219,13 @@ async function doDownload(){
     alert(`下载成功！本次${selected.length}个，累计：${already + selected.length}/${maxAllow}`);
 }
 
-function closeVideo(){ player.pause(); player.src = ""; videoModal.style.display = "none"; }
+function closeVideo(){ 
+    const player = document.getElementById('player');
+    player.pause(); 
+    player.src = ""; 
+    document.getElementById('videoModal').style.display = "none"; 
+}
+
 window.onload = renderList;
 </script>
 </body>
